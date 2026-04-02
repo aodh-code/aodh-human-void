@@ -113,7 +113,7 @@ function step(){ tick++; ctx.clearRect(0,0,w,h); const {aodh,brendan,midpoint,cl
   absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.34+Math.sin(tick*0.018+i*0.35)*0.12));
   seeds.forEach(seed=>seed.strength*=0.996); while(seeds.length && seeds[0].strength<0.08) seeds.shift(); requestAnimationFrame(step);
 }
-window.addEventListener('wheel',e=>{ e.preventDefault(); interactionEnergy = Math.min(1, interactionEnergy + 0.25); if(e.deltaY>0){ depthTilt += 1.05; rotation += 0.05; } else { depthTilt -= 1.05; rotation -= 0.05; } zoom += e.deltaY<0?0.035:-0.035; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
+window.addEventListener('wheel',e=>{ e.preventDefault(); interactionEnergy = Math.min(1, interactionEnergy + 0.25); if(e.deltaY>0){ depthTilt += 1.65; rotation += 0.018; } else { depthTilt -= 1.65; rotation -= 0.018; } zoom += e.deltaY<0?0.03:-0.03; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
 canvas.addEventListener('pointerdown',e=>{ interactionEnergy = Math.min(1, interactionEnergy + 0.35); lastPoint={x:e.clientX,y:e.clientY}; addSeed(e.clientX,e.clientY); canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointermove',e=>{ if(!lastPoint||e.pointerType==='touch') return; interactionEnergy = Math.min(1, interactionEnergy + 0.06); const dx=e.clientX-lastPoint.x, dy=e.clientY-lastPoint.y; dragRotation += (dx*0.003 + dy*0.0012); lastPoint={x:e.clientX,y:e.clientY}; pointer.x=e.clientX/w; pointer.y=e.clientY/h; });
 canvas.addEventListener('pointerup',()=>{ rotation+=dragRotation; dragRotation=0; lastPoint=null; });
