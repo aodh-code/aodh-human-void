@@ -3,380 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Aodh × Brendan — V6</title>
+  <title>Aodh × Brendan — V7</title>
   <style>
-    :root {
-      --bg0: #02040a;
-      --bg1: #09121d;
-    }
-    * { box-sizing: border-box; }
     html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: radial-gradient(circle at 50% 20%, var(--bg1) 0%, var(--bg0) 60%, #010203 100%);
-      touch-action: none;
+      margin: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none;
+      background: radial-gradient(circle at 50% 20%, #09121d 0%, #02040a 60%, #010203 100%);
     }
     canvas { width: 100%; height: 100%; display: block; }
-    .veil {
-      position: fixed; inset: 0; pointer-events: none;
+    .veil { position: fixed; inset: 0; pointer-events: none; mix-blend-mode: screen;
       background:
-        radial-gradient(circle at 18% 20%, rgba(123,197,255,0.07), transparent 22%),
+        radial-gradient(circle at 18% 20%, rgba(123,197,255,0.06), transparent 22%),
         radial-gradient(circle at 82% 18%, rgba(239,212,145,0.05), transparent 18%),
-        radial-gradient(circle at 50% 82%, rgba(255,255,255,0.025), transparent 24%);
-      mix-blend-mode: screen;
+        radial-gradient(circle at 50% 82%, rgba(255,255,255,0.02), transparent 24%);
     }
-    .frame {
-      position: fixed; inset: 12px; pointer-events: none;
-      border: 1px solid rgba(255,255,255,0.06); border-radius: 24px;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
-    }
+    .frame { position: fixed; inset: 12px; pointer-events: none; border: 1px solid rgba(255,255,255,0.06); border-radius: 24px; box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset; }
   </style>
 </head>
 <body>
-  <canvas id="c"></canvas>
-  <div class="veil"></div>
-  <div class="frame"></div>
-  <script>
-    const canvas = document.getElementById('c');
-    const ctx = canvas.getContext('2d');
-
-    let w, h, dpr;
-    let zoom = 1;
-    let rotation = 0;
-    let dragRotation = 0;
-    let pan = { x: 0, y: 0 };
-    let lastTouchDistance = null;
-    let lastPoint = null;
-
-    const pointer = { x: 0.5, y: 0.5 };
-
-    const anchors = [
-      { key: 'memory', angle: -1.9, radius: 0.33, tone: 'blue', mass: 1.25 },
-      { key: 'github', angle: -0.95, radius: 0.36, tone: 'white', mass: 1.1 },
-      { key: 'google', angle: -0.15, radius: 0.32, tone: 'blue', mass: 1.2 },
-      { key: 'notion', angle: 0.75, radius: 0.31, tone: 'gold', mass: 1.25 },
-      { key: 'diary', angle: 1.45, radius: 0.27, tone: 'gold', mass: 1.1 },
-      { key: 'fuji', angle: 2.15, radius: 0.34, tone: 'white', mass: 1.1 },
-      { key: 'cron', angle: 2.85, radius: 0.29, tone: 'blue', mass: 1.15 }
-    ];
-
-    const particles = [];
-    const COUNT = 84;
-    let tick = 0;
-
-    function toneColor(tone, a=1) {
-      if (tone === 'gold') return `rgba(239,212,145,${a})`;
-      if (tone === 'white') return `rgba(239,245,252,${a})`;
-      return `rgba(123,197,255,${a})`;
+<canvas id="c"></canvas><div class="veil"></div><div class="frame"></div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let w,h,dpr,tick=0,zoom=1,rotation=0,dragRotation=0,pan={x:0,y:0},lastTouchDistance=null,lastPoint=null;
+const pointer={x:0.5,y:0.5};
+const anchors=[
+  { key:'memory', angle:-1.9, radius:0.33, tone:'blue', mass:1.15 },
+  { key:'github', angle:-0.95, radius:0.36, tone:'white', mass:1.0 },
+  { key:'google', angle:-0.15, radius:0.32, tone:'blue', mass:1.1 },
+  { key:'notion', angle:0.75, radius:0.31, tone:'gold', mass:1.15 },
+  { key:'diary', angle:1.45, radius:0.27, tone:'gold', mass:1.0 },
+  { key:'fuji', angle:2.15, radius:0.34, tone:'white', mass:1.0 },
+  { key:'cron', angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
+];
+const particles=[]; const COUNT=90;
+function toneColor(tone,a=1){ if(tone==='gold') return `rgba(239,212,145,${a})`; if(tone==='white') return `rgba(239,245,252,${a})`; return `rgba(123,197,255,${a})`; }
+function rotatePoint(x,y,angle){ const c=Math.cos(angle), s=Math.sin(angle); return {x:x*c-y*s, y:x*s+y*c}; }
+function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+function resize(){ dpr=Math.min(window.devicePixelRatio||1,2); w=window.innerWidth; h=window.innerHeight; canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width=w+'px'; canvas.style.height=h+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); if(!particles.length) build(); }
+function build(){ particles.length=0; const min=Math.min(w,h); for(let i=0;i<COUNT;i++){ const angle=Math.random()*Math.PI*2; const radius=min*(0.08+Math.random()*0.3); const cluster=i%anchors.length; particles.push({ x:Math.cos(angle)*radius, y:Math.sin(angle)*radius*0.8, vx:(Math.random()-0.5)*0.2, vy:(Math.random()-0.5)*0.2, tone:anchors[cluster].tone, cluster, mass:0.5+Math.random()*1.5, size:0.8+Math.random()*1.8, lineable:false }); } }
+function drawDot(x,y,r,tone,a=1){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=toneColor(tone,a); ctx.fill(); }
+function drawLine(a,b,alpha,tone='blue'){ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.strokeStyle=toneColor(tone,alpha); ctx.stroke(); }
+function world(){ const cx=w/2+pan.x, cy=h/2+pan.y, min=Math.min(w,h), totalRotation=rotation+dragRotation;
+  const aRot=rotatePoint(-min*0.12*zoom,-10,totalRotation), bRot=rotatePoint(min*0.12*zoom,12,totalRotation);
+  const aodh={x:cx+aRot.x,y:cy+aRot.y,tone:'blue',mass:2.2}, brendan={x:cx+bRot.x,y:cy+bRot.y,tone:'gold',mass:2.4};
+  const midpoint={x:(aodh.x+brendan.x)/2,y:(aodh.y+brendan.y)/2};
+  const clusterPoints=anchors.map((cluster,i)=>{ const orbit={ x:Math.cos(cluster.angle+tick*0.001*(i%2?1:-1))*min*cluster.radius*zoom, y:Math.sin(cluster.angle+tick*0.0012*(i%2?-1:1))*min*cluster.radius*0.72*zoom + Math.sin(tick*0.008+i)*6 }; const rot=rotatePoint(orbit.x,orbit.y,totalRotation*0.72); return {...cluster,x:midpoint.x+rot.x,y:midpoint.y+rot.y}; });
+  return {aodh,brendan,midpoint,clusterPoints,totalRotation,min}; }
+function step(){ tick++; ctx.clearRect(0,0,w,h); const {aodh,brendan,midpoint,clusterPoints,totalRotation,min}=world(); const centres=[aodh,brendan,...clusterPoints]; const absoluteParticles=[];
+  for(let i=0;i<5;i++){ ctx.beginPath(); const r=min*(0.1+i*0.058)*zoom+Math.sin(tick*0.01+i)*2; ctx.arc(midpoint.x,midpoint.y,r,0,Math.PI*2); ctx.strokeStyle=`rgba(255,255,255,${0.018+i*0.012})`; ctx.stroke(); }
+  particles.forEach((p,i)=>{ const anchor=clusterPoints[p.cluster]; let ax=0, ay=0;
+    centres.forEach(c=>{ const tx=c.x-midpoint.x, ty=c.y-midpoint.y; const dx=tx-p.x, dy=ty-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2); const force=(c.mass*0.16)/Math.max(36,d2*0.017); ax+=(dx/d)*force; ay+=(dy/d)*force; });
+    const homeDx=(anchor.x-midpoint.x)-p.x, homeDy=(anchor.y-midpoint.y)-p.y; ax+=homeDx*0.00045; ay+=homeDy*0.00045;
+    for(let j=0;j<particles.length;j++){ if(i===j) continue; const q=particles[j]; const dx=q.x-p.x, dy=q.y-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2);
+      if(d<92*zoom){ const sign=d>32*zoom?1:-1; const strength=sign*(q.mass*0.0038)/Math.max(28,d2*0.038); ax+=(dx/d)*strength; ay+=(dy/d)*strength; }
+      if(d<18*zoom){ const repel=(18*zoom-d)*0.00055; ax-=(dx/d)*repel; ay-=(dy/d)*repel; }
     }
-
-    function rotatePoint(x, y, angle) {
-      const c = Math.cos(angle), s = Math.sin(angle);
-      return { x: x * c - y * s, y: x * s + y * c };
-    }
-
-    function distance(a, b) {
-      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    }
-
-    function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = w + 'px';
-      canvas.style.height = h + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!particles.length) build();
-    }
-
-    function build() {
-      particles.length = 0;
-      const min = Math.min(w, h);
-      for (let i = 0; i < COUNT; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = min * (0.08 + Math.random() * 0.28);
-        const cluster = i % anchors.length;
-        particles.push({
-          x: Math.cos(angle) * radius,
-          y: Math.sin(angle) * radius * 0.8,
-          vx: 0,
-          vy: 0,
-          tone: anchors[cluster].tone,
-          cluster,
-          mass: 0.6 + Math.random() * 1.8,
-          size: 0.9 + Math.random() * 2.1,
-          lineable: false
-        });
-      }
-    }
-
-    function drawDot(x, y, r, tone, a=1) {
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = toneColor(tone, a);
-      ctx.fill();
-    }
-
-    function drawLine(a, b, alpha, tone='blue') {
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = toneColor(tone, alpha);
-      ctx.stroke();
-    }
-
-    function world() {
-      const cx = w / 2 + pan.x;
-      const cy = h / 2 + pan.y;
-      const min = Math.min(w, h);
-      const totalRotation = rotation + dragRotation;
-
-      const aodhBase = { x: -min * 0.12 * zoom, y: -10 };
-      const brendanBase = { x: min * 0.12 * zoom, y: 12 };
-      const aRot = rotatePoint(aodhBase.x, aodhBase.y, totalRotation);
-      const bRot = rotatePoint(brendanBase.x, brendanBase.y, totalRotation);
-      const aodh = { x: cx + aRot.x, y: cy + aRot.y, tone: 'blue', mass: 2.6 };
-      const brendan = { x: cx + bRot.x, y: cy + bRot.y, tone: 'gold', mass: 2.9 };
-      const midpoint = { x: (aodh.x + brendan.x) / 2, y: (aodh.y + brendan.y) / 2 };
-
-      const clusterPoints = anchors.map((cluster, i) => {
-        const orbit = {
-          x: Math.cos(cluster.angle + tick * 0.001 * (i % 2 ? 1 : -1)) * min * cluster.radius * zoom,
-          y: Math.sin(cluster.angle + tick * 0.0012 * (i % 2 ? -1 : 1)) * min * cluster.radius * 0.72 * zoom
-        };
-        const rot = rotatePoint(orbit.x, orbit.y, totalRotation * 0.72);
-        return {
-          ...cluster,
-          x: midpoint.x + rot.x,
-          y: midpoint.y + rot.y
-        };
-      });
-
-      return { aodh, brendan, midpoint, clusterPoints, totalRotation, min };
-    }
-
-    function step() {
-      tick++;
-      ctx.clearRect(0, 0, w, h);
-      const { aodh, brendan, midpoint, clusterPoints, totalRotation, min } = world();
-
-      const centres = [aodh, brendan, ...clusterPoints];
-      const absoluteParticles = [];
-
-      // rings
-      for (let i = 0; i < 5; i++) {
-        ctx.beginPath();
-        const r = min * (0.1 + i * 0.058) * zoom + Math.sin(tick * 0.01 + i) * 2;
-        ctx.arc(midpoint.x, midpoint.y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255,255,255,${0.02 + i * 0.013})`;
-        ctx.stroke();
-      }
-
-      // forces
-      particles.forEach((p, i) => {
-        const anchor = clusterPoints[p.cluster];
-        let ax = 0, ay = 0;
-
-        centres.forEach(c => {
-          const targetX = c.x - midpoint.x;
-          const targetY = c.y - midpoint.y;
-          const dx = targetX - p.x;
-          const dy = targetY - p.y;
-          const d2 = dx*dx + dy*dy + 0.001;
-          const d = Math.sqrt(d2);
-          const force = (c.mass * 0.22) / Math.max(28, d2 * 0.014);
-          ax += (dx / d) * force;
-          ay += (dy / d) * force;
-        });
-
-        // local attraction to cluster home
-        const homeDx = (anchor.x - midpoint.x) - p.x;
-        const homeDy = (anchor.y - midpoint.y) - p.y;
-        ax += homeDx * 0.0008;
-        ay += homeDy * 0.0008;
-
-        // particle-particle interaction
-        for (let j = 0; j < particles.length; j++) {
-          if (i === j) continue;
-          const q = particles[j];
-          const dx = q.x - p.x;
-          const dy = q.y - p.y;
-          const d2 = dx*dx + dy*dy + 0.001;
-          const d = Math.sqrt(d2);
-          if (d < 88 * zoom) {
-            const attract = d > 22 * zoom;
-            const sign = attract ? 1 : -1;
-            const strength = sign * (q.mass * 0.006) / Math.max(24, d2 * 0.03);
-            ax += (dx / d) * strength;
-            ay += (dy / d) * strength;
-          }
-        }
-
-        // pointer influence
-        const px = (pointer.x - 0.5) * min * 0.55;
-        const py = (pointer.y - 0.5) * min * 0.55;
-        const pdx = px - p.x;
-        const pdy = py - p.y;
-        const pd = Math.hypot(pdx, pdy) + 0.001;
-        ax += (pdx / pd) * 0.0007;
-        ay += (pdy / pd) * 0.0007;
-
-        p.vx = (p.vx + ax) * 0.985;
-        p.vy = (p.vy + ay) * 0.985;
-        p.x += p.vx;
-        p.y += p.vy;
-        p.lineable = p.size < 1.85;
-
-        absoluteParticles.push({
-          x: midpoint.x + p.x,
-          y: midpoint.y + p.y,
-          tone: p.tone,
-          size: p.size,
-          lineable: p.lineable,
-          cluster: p.cluster
-        });
-      });
-
-      // link centres
-      drawLine(aodh, brendan, 0.22, 'gold');
-      clusterPoints.forEach(c => drawLine(midpoint, c, 0.05, c.tone));
-
-      // cluster anchors
-      clusterPoints.forEach(c => drawDot(c.x, c.y, 7 * zoom, c.tone, 0.85));
-      drawDot(aodh.x, aodh.y, 5.4 * zoom, 'blue', 1);
-      drawDot(brendan.x, brendan.y, 6.6 * zoom, 'gold', 1);
-
-      // line graph among small particles only
-      const neighbors = new Map();
-      absoluteParticles.forEach((p, i) => neighbors.set(i, []));
-      for (let i = 0; i < absoluteParticles.length; i++) {
-        const a = absoluteParticles[i];
-        if (!a.lineable) continue;
-        for (let j = i + 1; j < absoluteParticles.length; j++) {
-          const b = absoluteParticles[j];
-          if (!b.lineable) continue;
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 56 * zoom) {
-            neighbors.get(i).push(j);
-            neighbors.get(j).push(i);
-            drawLine(a, b, (1 - dist / (56 * zoom)) * 0.085, a.tone);
-          }
-        }
-      }
-
-      // emergent triangles / shaded polygons
-      for (let i = 0; i < absoluteParticles.length; i++) {
-        const a = absoluteParticles[i];
-        if (!a.lineable) continue;
-        const ns = neighbors.get(i);
-        for (let ni = 0; ni < ns.length; ni++) {
-          for (let nj = ni + 1; nj < ns.length; nj++) {
-            const j = ns[ni], k = ns[nj];
-            if (!neighbors.get(j).includes(k)) continue;
-            const b = absoluteParticles[j], c = absoluteParticles[k];
-            const area = Math.abs((b.x-a.x)*(c.y-a.y) - (c.x-a.x)*(b.y-a.y)) * 0.5;
-            if (area < 180 * zoom || area > 2400 * zoom) continue;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.lineTo(c.x, c.y);
-            ctx.closePath();
-            ctx.fillStyle = toneColor(a.tone, 0.035);
-            ctx.fill();
-          }
-        }
-      }
-
-      // labels only when zoomed
-      if (zoom > 1.22) {
-        ctx.font = `${11 * zoom}px Inter, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        clusterPoints.forEach(c => {
-          ctx.fillStyle = 'rgba(239,245,252,0.68)';
-          ctx.fillText(c.key, c.x, c.y - 18 * zoom);
-        });
-      }
-
-      // draw particles last
-      absoluteParticles.forEach((p, i) => {
-        const shimmer = 0.45 + Math.sin(tick * 0.018 + i * 0.35) * 0.18;
-        drawDot(p.x, p.y, p.size, p.tone, shimmer);
-      });
-
-      requestAnimationFrame(step);
-    }
-
-    window.addEventListener('wheel', e => {
-      e.preventDefault();
-      zoom += e.deltaY < 0 ? 0.06 : -0.06;
-      zoom = Math.max(0.8, Math.min(2.2, zoom));
-    }, { passive: false });
-
-    canvas.addEventListener('pointerdown', e => {
-      lastPoint = { x: e.clientX, y: e.clientY };
-      canvas.setPointerCapture(e.pointerId);
-    });
-    canvas.addEventListener('pointermove', e => {
-      if (!lastPoint || e.pointerType === 'touch') return;
-      const dx = e.clientX - lastPoint.x;
-      dragRotation += dx * 0.0035;
-      lastPoint = { x: e.clientX, y: e.clientY };
-      pointer.x = e.clientX / w;
-      pointer.y = e.clientY / h;
-    });
-    canvas.addEventListener('pointerup', () => {
-      rotation += dragRotation;
-      dragRotation = 0;
-      lastPoint = null;
-    });
-
-    canvas.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        lastPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        lastTouchDistance = null;
-      } else if (e.touches.length === 2) {
-        lastTouchDistance = distance(e.touches[0], e.touches[1]);
-      }
-    }, { passive: false });
-
-    canvas.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (e.touches.length === 1 && lastPoint) {
-        const t = e.touches[0];
-        const dx = t.clientX - lastPoint.x;
-        dragRotation += dx * 0.004;
-        lastPoint = { x: t.clientX, y: t.clientY };
-        pointer.x = t.clientX / w;
-        pointer.y = t.clientY / h;
-      } else if (e.touches.length === 2) {
-        const d = distance(e.touches[0], e.touches[1]);
-        if (lastTouchDistance) {
-          zoom *= d / lastTouchDistance;
-          zoom = Math.max(0.8, Math.min(2.2, zoom));
-        }
-        lastTouchDistance = d;
-      }
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', e => {
-      if (e.touches.length < 2) lastTouchDistance = null;
-      if (e.touches.length === 0) {
-        rotation += dragRotation;
-        dragRotation = 0;
-        lastPoint = null;
-      }
-    });
-
-    window.addEventListener('resize', resize);
-    resize();
-    step();
-  </script>
+    const tideX=Math.sin(tick*0.004 + p.cluster)*0.00075, tideY=Math.cos(tick*0.0035 + p.cluster*0.7)*0.00075; ax+=tideX; ay+=tideY;
+    const px=(pointer.x-0.5)*min*0.55, py=(pointer.y-0.5)*min*0.55; const pdx=px-p.x, pdy=py-p.y; const pd=Math.hypot(pdx,pdy)+0.001; ax+=(pdx/pd)*0.00035; ay+=(pdy/pd)*0.00035;
+    p.vx=(p.vx+ax)*0.989; p.vy=(p.vy+ay)*0.989; p.x+=p.vx; p.y+=p.vy; p.lineable=p.size<1.55;
+    absoluteParticles.push({x:midpoint.x+p.x,y:midpoint.y+p.y,tone:p.tone,size:p.size,lineable:p.lineable,cluster:p.cluster});
+  });
+  drawLine(aodh,brendan,0.2,'gold'); clusterPoints.forEach(c=>drawLine(midpoint,c,0.04,c.tone)); clusterPoints.forEach(c=>drawDot(c.x,c.y,6.5*zoom,c.tone,0.82)); drawDot(aodh.x,aodh.y,5.2*zoom,'blue',1); drawDot(brendan.x,brendan.y,6.2*zoom,'gold',1);
+  const neighbors=new Map(); absoluteParticles.forEach((p,i)=>neighbors.set(i,[]));
+  for(let i=0;i<absoluteParticles.length;i++){ const a=absoluteParticles[i]; if(!a.lineable) continue; for(let j=i+1;j<absoluteParticles.length;j++){ const b=absoluteParticles[j]; if(!b.lineable) continue; const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy); if(dist<44*zoom){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(44*zoom))*0.055,a.tone); } } }
+  for(let i=0;i<absoluteParticles.length;i++){ const a=absoluteParticles[i]; if(!a.lineable) continue; const ns=neighbors.get(i); for(let ni=0;ni<ns.length;ni++){ for(let nj=ni+1;nj<ns.length;nj++){ const j=ns[ni], k=ns[nj]; if(!neighbors.get(j).includes(k)) continue; const b=absoluteParticles[j], c=absoluteParticles[k]; const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5; if(area<220*zoom||area>1200*zoom) continue; if(Math.random()>0.08) continue; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath(); ctx.fillStyle=toneColor(a.tone,0.022); ctx.fill(); } } }
+  if(zoom>1.28){ ctx.font=`${10*zoom}px Inter, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; clusterPoints.forEach(c=>{ ctx.fillStyle='rgba(239,245,252,0.5)'; ctx.fillText(c.key,c.x,c.y-16*zoom); }); }
+  absoluteParticles.forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.42+Math.sin(tick*0.018+i*0.35)*0.15)); requestAnimationFrame(step);
+}
+window.addEventListener('wheel',e=>{ e.preventDefault(); zoom+=e.deltaY<0?0.06:-0.06; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
+canvas.addEventListener('pointerdown',e=>{ lastPoint={x:e.clientX,y:e.clientY}; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove',e=>{ if(!lastPoint||e.pointerType==='touch') return; const dx=e.clientX-lastPoint.x; dragRotation+=dx*0.0035; lastPoint={x:e.clientX,y:e.clientY}; pointer.x=e.clientX/w; pointer.y=e.clientY/h; });
+canvas.addEventListener('pointerup',()=>{ rotation+=dragRotation; dragRotation=0; lastPoint=null; });
+canvas.addEventListener('touchstart',e=>{ if(e.touches.length===1){ lastPoint={x:e.touches[0].clientX,y:e.touches[0].clientY}; lastTouchDistance=null; } else if(e.touches.length===2){ lastTouchDistance=distance(e.touches[0],e.touches[1]); } },{passive:false});
+canvas.addEventListener('touchmove',e=>{ e.preventDefault(); if(e.touches.length===1&&lastPoint){ const t=e.touches[0]; const dx=t.clientX-lastPoint.x; dragRotation+=dx*0.004; lastPoint={x:t.clientX,y:t.clientY}; pointer.x=t.clientX/w; pointer.y=t.clientY/h; } else if(e.touches.length===2){ const d=distance(e.touches[0],e.touches[1]); if(lastTouchDistance){ zoom*=d/lastTouchDistance; zoom=Math.max(0.8,Math.min(2.2,zoom)); } lastTouchDistance=d; } },{passive:false});
+canvas.addEventListener('touchend',e=>{ if(e.touches.length<2) lastTouchDistance=null; if(e.touches.length===0){ rotation+=dragRotation; dragRotation=0; lastPoint=null; } });
+window.addEventListener('resize',resize); resize(); step();
+</script>
 </body>
 </html>
