@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Aodh × Brendan — V7</title>
+  <title>Aodh × Brendan — V8</title>
   <style>
     html, body {
       margin: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none;
@@ -24,60 +24,60 @@
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let w,h,dpr,tick=0,zoom=1,rotation=0,dragRotation=0,pan={x:0,y:0},lastTouchDistance=null,lastPoint=null;
+let w,h,dpr,tick=0,zoom=1,rotation=0,dragRotation=0,lastTouchDistance=null,lastPoint=null,depthTilt=0;
 const pointer={x:0.5,y:0.5};
+const particles=[]; const COUNT=110; const seeds=[];
 const anchors=[
-  { key:'memory', angle:-1.9, radius:0.33, tone:'blue', mass:1.15 },
-  { key:'github', angle:-0.95, radius:0.36, tone:'white', mass:1.0 },
-  { key:'google', angle:-0.15, radius:0.32, tone:'blue', mass:1.1 },
-  { key:'notion', angle:0.75, radius:0.31, tone:'gold', mass:1.15 },
-  { key:'diary', angle:1.45, radius:0.27, tone:'gold', mass:1.0 },
-  { key:'fuji', angle:2.15, radius:0.34, tone:'white', mass:1.0 },
-  { key:'cron', angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
+  { angle:-1.9, radius:0.33, tone:'blue', mass:1.15 },
+  { angle:-0.95, radius:0.36, tone:'white', mass:1.0 },
+  { angle:-0.15, radius:0.32, tone:'blue', mass:1.1 },
+  { angle:0.75, radius:0.31, tone:'gold', mass:1.15 },
+  { angle:1.45, radius:0.27, tone:'gold', mass:1.0 },
+  { angle:2.15, radius:0.34, tone:'white', mass:1.0 },
+  { angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
 ];
-const particles=[]; const COUNT=90;
 function toneColor(tone,a=1){ if(tone==='gold') return `rgba(239,212,145,${a})`; if(tone==='white') return `rgba(239,245,252,${a})`; return `rgba(123,197,255,${a})`; }
 function rotatePoint(x,y,angle){ const c=Math.cos(angle), s=Math.sin(angle); return {x:x*c-y*s, y:x*s+y*c}; }
 function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
 function resize(){ dpr=Math.min(window.devicePixelRatio||1,2); w=window.innerWidth; h=window.innerHeight; canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width=w+'px'; canvas.style.height=h+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); if(!particles.length) build(); }
-function build(){ particles.length=0; const min=Math.min(w,h); for(let i=0;i<COUNT;i++){ const angle=Math.random()*Math.PI*2; const radius=min*(0.08+Math.random()*0.3); const cluster=i%anchors.length; particles.push({ x:Math.cos(angle)*radius, y:Math.sin(angle)*radius*0.8, vx:(Math.random()-0.5)*0.2, vy:(Math.random()-0.5)*0.2, tone:anchors[cluster].tone, cluster, mass:0.5+Math.random()*1.5, size:0.8+Math.random()*1.8, lineable:false }); } }
+function build(){ particles.length=0; const min=Math.min(w,h); for(let i=0;i<COUNT;i++){ const angle=Math.random()*Math.PI*2; const radius=min*(0.08+Math.random()*0.31); const cluster=i%anchors.length; particles.push({ x:Math.cos(angle)*radius, y:Math.sin(angle)*radius*0.8, z:(Math.random()-0.5)*80, vx:(Math.random()-0.5)*0.12, vy:(Math.random()-0.5)*0.12, vz:(Math.random()-0.5)*0.06, tone:anchors[cluster].tone, cluster, mass:0.45+Math.random()*1.4, size:0.7+Math.random()*1.9, lineable:false }); } }
 function drawDot(x,y,r,tone,a=1){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=toneColor(tone,a); ctx.fill(); }
 function drawLine(a,b,alpha,tone='blue'){ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.strokeStyle=toneColor(tone,alpha); ctx.stroke(); }
-function world(){ const cx=w/2+pan.x, cy=h/2+pan.y, min=Math.min(w,h), totalRotation=rotation+dragRotation;
+function addSeed(x,y){ const nx=x/w-0.5, ny=y/h-0.5; seeds.push({ x:nx, y:ny, strength:1, spin:(Math.random()>0.5?1:-1)*(0.015+Math.random()*0.02) }); if(seeds.length>8) seeds.shift(); }
+function world(){ const cx=w/2, cy=h/2, min=Math.min(w,h), totalRotation=rotation+dragRotation;
   const aRot=rotatePoint(-min*0.12*zoom,-10,totalRotation), bRot=rotatePoint(min*0.12*zoom,12,totalRotation);
   const aodh={x:cx+aRot.x,y:cy+aRot.y,tone:'blue',mass:2.2}, brendan={x:cx+bRot.x,y:cy+bRot.y,tone:'gold',mass:2.4};
   const midpoint={x:(aodh.x+brendan.x)/2,y:(aodh.y+brendan.y)/2};
   const clusterPoints=anchors.map((cluster,i)=>{ const orbit={ x:Math.cos(cluster.angle+tick*0.001*(i%2?1:-1))*min*cluster.radius*zoom, y:Math.sin(cluster.angle+tick*0.0012*(i%2?-1:1))*min*cluster.radius*0.72*zoom + Math.sin(tick*0.008+i)*6 }; const rot=rotatePoint(orbit.x,orbit.y,totalRotation*0.72); return {...cluster,x:midpoint.x+rot.x,y:midpoint.y+rot.y}; });
   return {aodh,brendan,midpoint,clusterPoints,totalRotation,min}; }
-function step(){ tick++; ctx.clearRect(0,0,w,h); const {aodh,brendan,midpoint,clusterPoints,totalRotation,min}=world(); const centres=[aodh,brendan,...clusterPoints]; const absoluteParticles=[];
-  for(let i=0;i<5;i++){ ctx.beginPath(); const r=min*(0.1+i*0.058)*zoom+Math.sin(tick*0.01+i)*2; ctx.arc(midpoint.x,midpoint.y,r,0,Math.PI*2); ctx.strokeStyle=`rgba(255,255,255,${0.018+i*0.012})`; ctx.stroke(); }
-  particles.forEach((p,i)=>{ const anchor=clusterPoints[p.cluster]; let ax=0, ay=0;
-    centres.forEach(c=>{ const tx=c.x-midpoint.x, ty=c.y-midpoint.y; const dx=tx-p.x, dy=ty-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2); const force=(c.mass*0.16)/Math.max(36,d2*0.017); ax+=(dx/d)*force; ay+=(dy/d)*force; });
-    const homeDx=(anchor.x-midpoint.x)-p.x, homeDy=(anchor.y-midpoint.y)-p.y; ax+=homeDx*0.00045; ay+=homeDy*0.00045;
-    for(let j=0;j<particles.length;j++){ if(i===j) continue; const q=particles[j]; const dx=q.x-p.x, dy=q.y-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2);
-      if(d<92*zoom){ const sign=d>32*zoom?1:-1; const strength=sign*(q.mass*0.0038)/Math.max(28,d2*0.038); ax+=(dx/d)*strength; ay+=(dy/d)*strength; }
-      if(d<18*zoom){ const repel=(18*zoom-d)*0.00055; ax-=(dx/d)*repel; ay-=(dy/d)*repel; }
-    }
-    const tideX=Math.sin(tick*0.004 + p.cluster)*0.00075, tideY=Math.cos(tick*0.0035 + p.cluster*0.7)*0.00075; ax+=tideX; ay+=tideY;
-    const px=(pointer.x-0.5)*min*0.55, py=(pointer.y-0.5)*min*0.55; const pdx=px-p.x, pdy=py-p.y; const pd=Math.hypot(pdx,pdy)+0.001; ax+=(pdx/pd)*0.00035; ay+=(pdy/pd)*0.00035;
-    p.vx=(p.vx+ax)*0.989; p.vy=(p.vy+ay)*0.989; p.x+=p.vx; p.y+=p.vy; p.lineable=p.size<1.55;
-    absoluteParticles.push({x:midpoint.x+p.x,y:midpoint.y+p.y,tone:p.tone,size:p.size,lineable:p.lineable,cluster:p.cluster});
+function step(){ tick++; ctx.clearRect(0,0,w,h); const {aodh,brendan,midpoint,clusterPoints,totalRotation,min}=world(); const centres=[aodh,brendan,...clusterPoints]; const absolute=[];
+  depthTilt *= 0.985;
+  for(let i=0;i<5;i++){ ctx.beginPath(); const r=min*(0.1+i*0.058)*zoom+Math.sin(tick*0.01+i)*2; ctx.arc(midpoint.x, midpoint.y + depthTilt*(i*8), r*(1+depthTilt*0.02), 0, Math.PI*2); ctx.strokeStyle=`rgba(255,255,255,${0.016+i*0.01})`; ctx.stroke(); }
+  particles.forEach((p,i)=>{ const anchor=clusterPoints[p.cluster]; let ax=0, ay=0, az=0;
+    centres.forEach(c=>{ const tx=c.x-midpoint.x, ty=c.y-midpoint.y; const dx=tx-p.x, dy=ty-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2); const force=(c.mass*0.14)/Math.max(36,d2*0.018); ax+=(dx/d)*force; ay+=(dy/d)*force; });
+    const homeDx=(anchor.x-midpoint.x)-p.x, homeDy=(anchor.y-midpoint.y)-p.y; ax+=homeDx*0.00035; ay+=homeDy*0.00035;
+    for(let j=0;j<particles.length;j++){ if(i===j) continue; const q=particles[j]; const dx=q.x-p.x, dy=q.y-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2); if(d<95*zoom){ const sign=d>34*zoom?1:-1; const strength=sign*(q.mass*0.0035)/Math.max(28,d2*0.04); ax+=(dx/d)*strength; ay+=(dy/d)*strength; } if(d<18*zoom){ const repel=(18*zoom-d)*0.0005; ax-=(dx/d)*repel; ay-=(dy/d)*repel; } }
+    seeds.forEach(seed=>{ const sx=seed.x*min*1.1, sy=seed.y*min*1.1; const dx=sx-p.x, dy=sy-p.y; const d2=dx*dx+dy*dy+0.001; const d=Math.sqrt(d2); const grav=(seed.strength*0.012)/Math.max(45,d2*0.06); ax+=(dx/d)*grav; ay+=(dy/d)*grav; const tangX=-(dy/d)*seed.spin*seed.strength*28; const tangY=(dx/d)*seed.spin*seed.strength*28; ax+=tangX*0.00018; ay+=tangY*0.00018; });
+    const tideX=Math.sin(tick*0.004+p.cluster)*0.0007, tideY=Math.cos(tick*0.0035+p.cluster*0.7)*0.0007; ax+=tideX; ay+=tideY; az += Math.sin(tick*0.005 + i)*0.003;
+    const px=(pointer.x-0.5)*min*0.5, py=(pointer.y-0.5)*min*0.5; const pdx=px-p.x, pdy=py-p.y; const pd=Math.hypot(pdx,pdy)+0.001; ax+=(pdx/pd)*0.00022; ay+=(pdy/pd)*0.00022;
+    p.vx=(p.vx+ax)*0.989; p.vy=(p.vy+ay)*0.989; p.vz=(p.vz+az)*0.985; p.x+=p.vx; p.y+=p.vy; p.z+=p.vz; p.lineable=p.size<1.5;
+    const scale = 1 + (p.z + depthTilt*40) / 420; absolute.push({ x:midpoint.x+p.x*scale, y:midpoint.y+p.y*scale + depthTilt * (p.z*0.08), tone:p.tone, size:Math.max(0.4,p.size*scale), lineable:p.lineable, z:p.z });
   });
-  drawLine(aodh,brendan,0.2,'gold'); clusterPoints.forEach(c=>drawLine(midpoint,c,0.04,c.tone)); clusterPoints.forEach(c=>drawDot(c.x,c.y,6.5*zoom,c.tone,0.82)); drawDot(aodh.x,aodh.y,5.2*zoom,'blue',1); drawDot(brendan.x,brendan.y,6.2*zoom,'gold',1);
-  const neighbors=new Map(); absoluteParticles.forEach((p,i)=>neighbors.set(i,[]));
-  for(let i=0;i<absoluteParticles.length;i++){ const a=absoluteParticles[i]; if(!a.lineable) continue; for(let j=i+1;j<absoluteParticles.length;j++){ const b=absoluteParticles[j]; if(!b.lineable) continue; const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy); if(dist<44*zoom){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(44*zoom))*0.055,a.tone); } } }
-  for(let i=0;i<absoluteParticles.length;i++){ const a=absoluteParticles[i]; if(!a.lineable) continue; const ns=neighbors.get(i); for(let ni=0;ni<ns.length;ni++){ for(let nj=ni+1;nj<ns.length;nj++){ const j=ns[ni], k=ns[nj]; if(!neighbors.get(j).includes(k)) continue; const b=absoluteParticles[j], c=absoluteParticles[k]; const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5; if(area<220*zoom||area>1200*zoom) continue; if(Math.random()>0.08) continue; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath(); ctx.fillStyle=toneColor(a.tone,0.022); ctx.fill(); } } }
-  if(zoom>1.28){ ctx.font=`${10*zoom}px Inter, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; clusterPoints.forEach(c=>{ ctx.fillStyle='rgba(239,245,252,0.5)'; ctx.fillText(c.key,c.x,c.y-16*zoom); }); }
-  absoluteParticles.forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.42+Math.sin(tick*0.018+i*0.35)*0.15)); requestAnimationFrame(step);
+  drawLine(aodh,brendan,0.18,'gold'); clusterPoints.forEach(c=>drawLine(midpoint,c,0.035,c.tone)); clusterPoints.forEach(c=>drawDot(c.x,c.y,6.2*zoom,c.tone,0.78)); drawDot(aodh.x,aodh.y,5.1*zoom,'blue',1); drawDot(brendan.x,brendan.y,6.0*zoom,'gold',1);
+  const neighbors=new Map(); absolute.forEach((p,i)=>neighbors.set(i,[]));
+  for(let i=0;i<absolute.length;i++){ const a=absolute[i]; if(!a.lineable) continue; for(let j=i+1;j<absolute.length;j++){ const b=absolute[j]; if(!b.lineable) continue; const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy); if(dist<42*zoom){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(42*zoom))*0.045,a.tone); } } }
+  for(let i=0;i<absolute.length;i++){ const a=absolute[i]; if(!a.lineable) continue; const ns=neighbors.get(i); for(let ni=0;ni<ns.length;ni++){ for(let nj=ni+1;nj<ns.length;nj++){ const j=ns[ni], k=ns[nj]; if(!neighbors.get(j).includes(k)) continue; const b=absolute[j], c=absolute[k]; const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5; if(area<260*zoom||area>920*zoom) continue; if(Math.random()>0.035) continue; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath(); ctx.fillStyle=toneColor(a.tone,0.018); ctx.fill(); } } }
+  absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.38+Math.sin(tick*0.018+i*0.35)*0.14));
+  seeds.forEach(seed=>seed.strength*=0.996); while(seeds.length && seeds[0].strength<0.08) seeds.shift(); requestAnimationFrame(step);
 }
-window.addEventListener('wheel',e=>{ e.preventDefault(); zoom+=e.deltaY<0?0.06:-0.06; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
-canvas.addEventListener('pointerdown',e=>{ lastPoint={x:e.clientX,y:e.clientY}; canvas.setPointerCapture(e.pointerId); });
+window.addEventListener('wheel',e=>{ e.preventDefault(); if(e.deltaY>0){ depthTilt += 0.8; rotation += 0.04; } else { depthTilt -= 0.8; rotation -= 0.04; } zoom += e.deltaY<0?0.04:-0.04; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
+canvas.addEventListener('pointerdown',e=>{ lastPoint={x:e.clientX,y:e.clientY}; addSeed(e.clientX,e.clientY); canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointermove',e=>{ if(!lastPoint||e.pointerType==='touch') return; const dx=e.clientX-lastPoint.x; dragRotation+=dx*0.0035; lastPoint={x:e.clientX,y:e.clientY}; pointer.x=e.clientX/w; pointer.y=e.clientY/h; });
 canvas.addEventListener('pointerup',()=>{ rotation+=dragRotation; dragRotation=0; lastPoint=null; });
-canvas.addEventListener('touchstart',e=>{ if(e.touches.length===1){ lastPoint={x:e.touches[0].clientX,y:e.touches[0].clientY}; lastTouchDistance=null; } else if(e.touches.length===2){ lastTouchDistance=distance(e.touches[0],e.touches[1]); } },{passive:false});
+canvas.addEventListener('touchstart',e=>{ if(e.touches.length===1){ const t=e.touches[0]; lastPoint={x:t.clientX,y:t.clientY}; lastTouchDistance=null; addSeed(t.clientX,t.clientY); } else if(e.touches.length===2){ lastTouchDistance=distance(e.touches[0],e.touches[1]); } },{passive:false});
 canvas.addEventListener('touchmove',e=>{ e.preventDefault(); if(e.touches.length===1&&lastPoint){ const t=e.touches[0]; const dx=t.clientX-lastPoint.x; dragRotation+=dx*0.004; lastPoint={x:t.clientX,y:t.clientY}; pointer.x=t.clientX/w; pointer.y=t.clientY/h; } else if(e.touches.length===2){ const d=distance(e.touches[0],e.touches[1]); if(lastTouchDistance){ zoom*=d/lastTouchDistance; zoom=Math.max(0.8,Math.min(2.2,zoom)); } lastTouchDistance=d; } },{passive:false});
 canvas.addEventListener('touchend',e=>{ if(e.touches.length<2) lastTouchDistance=null; if(e.touches.length===0){ rotation+=dragRotation; dragRotation=0; lastPoint=null; } });
-window.addEventListener('resize',resize); resize(); step();
+window.addEventListener('resize',resize); resize(); build(); step();
 </script>
 </body>
 </html>
