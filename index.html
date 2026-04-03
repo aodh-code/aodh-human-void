@@ -141,9 +141,6 @@ function step(){
     absolute.push({ x:proj.x, y:proj.y, tone:p.tone, size:Math.max(0.35,p.size*(0.5 + proj.scale)), lineable:p.lineable, z:rx.z, scale:proj.scale });
   });
 
-  drawLine(aodh,brendan,0.06,'gold');
-  clusterPoints.forEach(c=>drawLine(midpoint,c,0.01,c.tone));
-  clusterPoints.forEach(c=>drawDot(c.x,c.y,5.2*c.scale,c.tone,0.28));
 
   const neighbors=new Map(); absolute.forEach((p,i)=>neighbors.set(i,[]));
   for(let i=0;i<absolute.length;i++){
