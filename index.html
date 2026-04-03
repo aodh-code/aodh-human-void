@@ -148,7 +148,7 @@ function step(){
     for(let j=i+1;j<absolute.length;j++){
       const b=absolute[j]; if(!b.lineable) continue;
       const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy);
-      if(dist<30*zoom*Math.min(a.scale,b.scale)+5){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(30*zoom+5))*0.012,a.tone); }
+      if(dist<30*zoom*Math.min(a.scale,b.scale)+5){ neighbors.get(i).push(j); neighbors.get(j).push(i); }
     }
   }
   for(let i=0;i<absolute.length;i++){
@@ -158,8 +158,6 @@ function step(){
       const b=absolute[j], c=absolute[k];
       const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5;
       if(area<240*zoom||area>620*zoom) continue; if(Math.random()>0.003) continue;
-      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
-      ctx.fillStyle=toneColor(a.tone,0.004); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.009); ctx.stroke();
     }
   }
   absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.3+Math.sin(tick*0.018+i*0.35)*0.12));
