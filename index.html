@@ -44,9 +44,10 @@
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let w,h,dpr,tick=0,zoom=1,rotation=0,dragRotation=0,lastTouchDistance=null,lastPoint=null,depthTilt=0,dragPitch=0,pitch=0,interactionEnergy=0;
+let w,h,dpr,tick=0,zoom=1,cameraDistance=460,lastTouchDistance=null,lastPoint=null,interactionEnergy=0;
+let yaw=0,pitch=0,dragYaw=0,dragPitch=0;
 const pointer={x:0.5,y:0.5};
-const particles=[]; const COUNT=110; const seeds=[];
+const particles=[]; const COUNT=120; const seeds=[];
 const anchors=[
   { angle:-1.9, radius:0.33, tone:'blue', mass:1.15 },
   { angle:-0.95, radius:0.36, tone:'white', mass:1.0 },
@@ -57,95 +58,124 @@ const anchors=[
   { angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
 ];
 function toneColor(tone,a=1){ if(tone==='gold') return `rgba(239,212,145,${a})`; if(tone==='white') return `rgba(239,245,252,${a})`; return `rgba(123,197,255,${a})`; }
-function rotatePoint(x,y,angle){ const c=Math.cos(angle), s=Math.sin(angle); return {x:x*c-y*s, y:x*s+y*c}; }
+function rotateX(y,z,a){ const c=Math.cos(a), s=Math.sin(a); return { y:y*c-z*s, z:y*s+z*c }; }
+function rotateY(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return { x:x*c+z*s, z:-x*s+z*c }; }
 function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
 function resize(){ dpr=Math.min(window.devicePixelRatio||1,2); w=window.innerWidth; h=window.innerHeight; canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width=w+'px'; canvas.style.height=h+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); if(!particles.length) build(); }
-function build(){ particles.length=0; const min=Math.min(w,h); for(let i=0;i<COUNT;i++){ const angle=Math.random()*Math.PI*2; const radius=min*(0.08+Math.random()*0.31); const cluster=i%anchors.length; particles.push({ x:Math.cos(angle)*radius, y:Math.sin(angle)*radius*0.8, z:(Math.random()-0.5)*140, vx:(Math.random()-0.5)*0.12, vy:(Math.random()-0.5)*0.12, vz:(Math.random()-0.5)*0.08, tone:anchors[cluster].tone, cluster, mass:0.45+Math.random()*1.4, size:0.7+Math.random()*1.9, lineable:false }); } }
+function build(){ particles.length=0; const min=Math.min(w,h); for(let i=0;i<COUNT;i++){ const angle=Math.random()*Math.PI*2; const radius=min*(0.08+Math.random()*0.31); const cluster=i%anchors.length; particles.push({ x:Math.cos(angle)*radius, y:Math.sin(angle)*radius*0.78, z:(Math.random()-0.5)*min*0.34, vx:(Math.random()-0.5)*0.08, vy:(Math.random()-0.5)*0.08, vz:(Math.random()-0.5)*0.08, tone:anchors[cluster].tone, cluster, mass:0.45+Math.random()*1.4, size:0.7+Math.random()*1.9, lineable:false }); } }
 function drawDot(x,y,r,tone,a=1){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=toneColor(tone,a); ctx.fill(); }
 function drawLine(a,b,alpha,tone='blue'){ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.strokeStyle=toneColor(tone,alpha); ctx.stroke(); }
 function addSeed(x,y){ const nx=x/w-0.5, ny=y/h-0.5; seeds.push({ x:nx, y:ny, strength:1, spin:(Math.random()>0.5?1:-1)*(0.015+Math.random()*0.02) }); if(seeds.length>8) seeds.shift(); }
-function drawWarpedGrid(midpoint,min,totalRotation){
-  const vanishY = midpoint.y - min * (0.18 + depthTilt * 0.004);
-  const vanishX = midpoint.x + Math.sin(totalRotation) * min * 0.08;
-  ctx.lineWidth = 1;
-
-  // perspective horizontals
-  for(let i=1;i<14;i++){
-    const t = i/14;
-    const y = vanishY + Math.pow(t, 1.65) * (h - vanishY + min*0.15);
-    const warp = Math.sin(tick*0.004 + i*0.4 + totalRotation) * 10;
-    ctx.beginPath();
-    for(let x=-w*0.1; x<=w*1.1; x+=22){
-      const dx = (x - vanishX) / Math.max(120, y - vanishY + 40);
-      const wx = x + dx * dx * 120 * Math.sign(dx) + Math.sin(x*0.003 + i) * 1.5;
-      const wy = y + Math.cos(x*0.004 + i + totalRotation) * 2 + warp * dx;
-      if(x===-w*0.1) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
-    }
-    ctx.strokeStyle = `rgba(255,255,255,${0.012 + (1-t)*0.03})`;
-    ctx.stroke();
-  }
-
-  // perspective verticals
-  for(let i=-9;i<=9;i++){
-    const baseX = midpoint.x + i * min * 0.06;
-    ctx.beginPath();
-    for(let t=0;t<=1.001;t+=0.03){
-      const y = h + 40 - t * (h - vanishY + 80);
-      const pinch = Math.pow(t, 1.15);
-      const x = baseX * (1-pinch) + vanishX * pinch;
-      const bend = Math.sin(tick*0.005 + i*0.6 + t*5) * (1-t) * 6;
-      const drift = Math.sin(totalRotation + i*0.2) * (1-t) * 10;
-      const px = x + bend + drift;
-      const py = y + Math.cos(i + t*6 + totalRotation) * (1-t) * 3;
-      if(t===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.strokeStyle = `rgba(160,214,255,${0.012 + (1-Math.abs(i)/10)*0.02})`;
-    ctx.stroke();
-  }
-}
-function world(){ const cx=w/2, cy=h/2, min=Math.min(w,h), naturalRotation=Math.sin(tick*0.0018)*0.08, totalRotation=rotation + naturalRotation + dragRotation * (0.25 + interactionEnergy*0.75), totalPitch=Math.max(-1.15, Math.min(1.15, pitch + dragPitch));
-  const pitchCos=Math.cos(totalPitch), pitchSin=Math.sin(totalPitch);
+function projectPoint(x,y,z,cx,cy){ const depth = cameraDistance + z; const scale = cameraDistance / Math.max(120, depth); return { x:cx + x*scale, y:cy + y*scale, scale, z }; }
+function getAngles(){ return { yaw:yaw + dragYaw + Math.sin(tick*0.0016)*0.05, pitch:Math.max(-1.1, Math.min(1.1, pitch + dragPitch)) }; }
+function world(){
+  const cx=w/2, cy=h/2, min=Math.min(w,h);
+  const {yaw:totalYaw, pitch:totalPitch} = getAngles();
   const aBase={x:-min*0.12*zoom,y:-10,z:-min*0.06}, bBase={x:min*0.12*zoom,y:12,z:min*0.06};
-  const aYaw=rotatePoint(aBase.x,aBase.y,totalRotation), bYaw=rotatePoint(bBase.x,bBase.y,totalRotation);
-  const aodh={x:cx+aYaw.x,y:cy+(aYaw.y*pitchCos-aBase.z*pitchSin),z:aYaw.y*pitchSin+aBase.z*pitchCos,tone:'blue',mass:2.2}, brendan={x:cx+bYaw.x,y:cy+(bYaw.y*pitchCos-bBase.z*pitchSin),z:bYaw.y*pitchSin+bBase.z*pitchCos,tone:'gold',mass:2.4};
+  const ar1=rotateY(aBase.x,aBase.z,totalYaw), ar2=rotateX(aBase.y,ar1.z,totalPitch);
+  const br1=rotateY(bBase.x,bBase.z,totalYaw), br2=rotateX(bBase.y,br1.z,totalPitch);
+  const aodh=projectPoint(ar1.x,ar2.y,ar2.z,cx,cy); aodh.tone='blue'; aodh.mass=2.2;
+  const brendan=projectPoint(br1.x,br2.y,br2.z,cx,cy); brendan.tone='gold'; brendan.mass=2.4;
   const midpoint={x:(aodh.x+brendan.x)/2,y:(aodh.y+brendan.y)/2};
-  const clusterPoints=anchors.map((cluster,i)=>{ const orbit={ x:Math.cos(cluster.angle+tick*0.001*(i%2?1:-1))*min*cluster.radius*zoom, y:Math.sin(cluster.angle+tick*0.0012*(i%2?-1:1))*min*cluster.radius*0.72*zoom + Math.sin(tick*0.008+i)*6, z:Math.cos(cluster.angle*1.3+tick*0.0016+i)*min*0.08 }; const rot=rotatePoint(orbit.x,orbit.y,totalRotation*0.72); const worldY=rot.y*pitchCos-orbit.z*pitchSin; const worldZ=rot.y*pitchSin+orbit.z*pitchCos; return {...cluster,x:midpoint.x+rot.x,y:midpoint.y+worldY,z:worldZ}; });
-  return {aodh,brendan,midpoint,clusterPoints,totalRotation,totalPitch,min}; }
-function step(){ tick++; ctx.clearRect(0,0,w,h); const {aodh,brendan,midpoint,clusterPoints,totalRotation,totalPitch,min}=world(); const centres=[aodh,brendan,...clusterPoints]; const absolute=[];
-  depthTilt *= 0.985;
-  dragPitch *= 0.92;
-  pitch = pitch * 0.992 + Math.sin(tick*0.0013)*0.0008;
-  interactionEnergy *= 0.985;
-  drawWarpedGrid(midpoint,min,totalRotation + totalPitch*0.12);
-  for(let i=0;i<4;i++){ ctx.beginPath(); const r=min*(0.12+i*0.072)*zoom+Math.sin(tick*0.01+i)*2; ctx.ellipse(midpoint.x, midpoint.y + depthTilt*(i*10) + totalPitch*(i*8), r*(1+depthTilt*0.018), r*(0.72 + depthTilt*0.006 + Math.abs(totalPitch)*0.08), totalRotation*0.25, 0, Math.PI*2); ctx.strokeStyle=`rgba(255,255,255,${0.012+i*0.008})`; ctx.stroke(); }
-  particles.forEach((p,i)=>{ const anchor=clusterPoints[p.cluster]; let ax=0, ay=0, az=0;
-    centres.forEach(c=>{ const tx=c.x-midpoint.x, ty=c.y-midpoint.y, tz=c.z||0; const dx=tx-p.x, dy=ty-p.y, dz=tz-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2); const force=(c.mass*0.14)/Math.max(36,d2*0.018); ax+=(dx/d)*force; ay+=(dy/d)*force; az+=(dz/d)*force; });
-    const homeDx=(anchor.x-midpoint.x)-p.x, homeDy=(anchor.y-midpoint.y)-p.y, homeDz=(anchor.z||0)-p.z; ax+=homeDx*0.00035; ay+=homeDy*0.00035; az+=homeDz*0.00035;
-    for(let j=0;j<particles.length;j++){ if(i===j) continue; const q=particles[j]; if(p.size<1.5 && q.size<1.5) continue; const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2); if(d<95*zoom){ const sign=d>34*zoom?1:-1; const strength=sign*(q.mass*0.0035)/Math.max(28,d2*0.04); ax+=(dx/d)*strength; ay+=(dy/d)*strength; az+=(dz/d)*strength; } if(d<18*zoom){ const repel=(18*zoom-d)*0.0005; ax-=(dx/d)*repel; ay-=(dy/d)*repel; az-=(dz/d)*repel; } }
-    seeds.forEach(seed=>{ const sx=seed.x*min*1.1, sy=seed.y*min*1.1, sz=Math.sin(tick*0.02 + seed.spin*40)*min*0.06*seed.strength; const dx=sx-p.x, dy=sy-p.y, dz=sz-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2); const grav=(seed.strength*0.012)/Math.max(45,d2*0.06); ax+=(dx/d)*grav; ay+=(dy/d)*grav; az+=(dz/d)*grav; const tangX=-(dy/d)*seed.spin*seed.strength*28; const tangY=(dx/d)*seed.spin*seed.strength*28; ax+=tangX*0.00018; ay+=tangY*0.00018; az+=Math.cos(seed.spin*50 + tick*0.03)*seed.strength*0.0007; });
-    const tideX=Math.sin(tick*0.004+p.cluster)*0.0007, tideY=Math.cos(tick*0.0035+p.cluster*0.7)*0.0007; ax+=tideX; ay+=tideY; az += Math.sin(tick*0.005 + i)*0.0045 + totalPitch*0.0025;
-    const px=(pointer.x-0.5)*min*0.5, py=(pointer.y-0.5)*min*0.5; const pdx=px-p.x, pdy=py-p.y; const pd=Math.hypot(pdx,pdy)+0.001; ax+=(pdx/pd)*0.00018; ay+=(pdy/pd)*0.00018;
-    p.vx=(p.vx+ax)*0.989; p.vy=(p.vy+ay)*0.989; p.vz=(p.vz+az)*0.982; p.x+=p.vx; p.y+=p.vy; p.z+=p.vz; p.lineable=p.size<1.45;
-    const rotY = p.y * Math.cos(totalPitch) - p.z * Math.sin(totalPitch);
-    const rotZ = p.y * Math.sin(totalPitch) + p.z * Math.cos(totalPitch) + depthTilt*28;
-    const zNorm = Math.max(-260, Math.min(260, rotZ));
-    const perspective = 320 / Math.max(120, 420 - zNorm);
-    absolute.push({ x:midpoint.x+p.x*perspective, y:midpoint.y+rotY*perspective, tone:p.tone, size:Math.max(0.35,p.size*(0.55 + perspective*0.9)), lineable:p.lineable, z:zNorm });
+  const clusterPoints=anchors.map((cluster,i)=>{
+    const orbit={ x:Math.cos(cluster.angle+tick*0.001*(i%2?1:-1))*min*cluster.radius*zoom, y:Math.sin(cluster.angle+tick*0.0012*(i%2?-1:1))*min*cluster.radius*0.72*zoom + Math.sin(tick*0.008+i)*6, z:Math.cos(cluster.angle*1.3+tick*0.0016+i)*min*0.13 };
+    const r1=rotateY(orbit.x,orbit.z,totalYaw*0.78), r2=rotateX(orbit.y,r1.z,totalPitch*0.95);
+    const p=projectPoint(r1.x,r2.y,r2.z,cx,cy);
+    return {...cluster, x:p.x, y:p.y, z:r2.z, scale:p.scale};
   });
-  drawLine(aodh,brendan,0.16,'gold'); clusterPoints.forEach(c=>drawLine(midpoint,c,0.03,c.tone)); clusterPoints.forEach(c=>drawDot(c.x,c.y,5.6*zoom,c.tone,0.7)); drawDot(aodh.x,aodh.y,4.8*zoom,'blue',0.95); drawDot(brendan.x,brendan.y,5.8*zoom,'gold',0.95);
-  const neighbors=new Map(); absolute.forEach((p,i)=>neighbors.set(i,[]));
-  for(let i=0;i<absolute.length;i++){ const a=absolute[i]; if(!a.lineable) continue; for(let j=i+1;j<absolute.length;j++){ const b=absolute[j]; if(!b.lineable) continue; const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy); if(dist<40*zoom){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(40*zoom))*0.038,a.tone); } } }
-  for(let i=0;i<absolute.length;i++){ const a=absolute[i]; if(!a.lineable) continue; const ns=neighbors.get(i); for(let ni=0;ni<ns.length;ni++){ for(let nj=ni+1;nj<ns.length;nj++){ const j=ns[ni], k=ns[nj]; if(!neighbors.get(j).includes(k)) continue; const b=absolute[j], c=absolute[k]; const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5; if(area<280*zoom||area>760*zoom) continue; if(Math.random()>0.012) continue; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath(); ctx.fillStyle=toneColor(a.tone,0.008); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.018); ctx.stroke(); } } }
-  absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.34+Math.sin(tick*0.018+i*0.35)*0.12));
-  seeds.forEach(seed=>seed.strength*=0.996); while(seeds.length && seeds[0].strength<0.08) seeds.shift(); requestAnimationFrame(step);
+  return {aodh,brendan,midpoint,clusterPoints,totalYaw,totalPitch,min,cx,cy};
 }
-window.addEventListener('wheel',e=>{ e.preventDefault(); interactionEnergy = Math.min(1, interactionEnergy + 0.25); if(e.deltaY>0){ depthTilt += 1.65; pitch += 0.075; } else { depthTilt -= 1.65; pitch -= 0.075; } zoom += e.deltaY<0?0.03:-0.03; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
+function step(){
+  tick++; ctx.clearRect(0,0,w,h);
+  const {aodh,brendan,midpoint,clusterPoints,totalYaw,totalPitch,min,cx,cy}=world();
+  const centres=[aodh,brendan,...clusterPoints]; const absolute=[];
+  interactionEnergy *= 0.985;
+  dragYaw *= 0.9; dragPitch *= 0.9;
+  pitch *= 0.994; yaw *= 0.997;
+
+  for(let i=0;i<4;i++){
+    const ringR=min*(0.12+i*0.072)*zoom+Math.sin(tick*0.01+i)*2;
+    const ringY = Math.cos(totalPitch) * (0.72 + i*0.03);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, ringR, ringR*Math.max(0.22, Math.abs(ringY)), totalYaw*0.15, 0, Math.PI*2);
+    ctx.strokeStyle=`rgba(255,255,255,${0.012+i*0.008})`; ctx.stroke();
+  }
+
+  particles.forEach((p,i)=>{
+    const anchor=clusterPoints[p.cluster]; let ax=0, ay=0, az=0;
+    centres.forEach(c=>{
+      const tx=(c.x-cx)/(c.scale||1), ty=(c.y-cy)/(c.scale||1), tz=c.z||0;
+      const dx=tx-p.x, dy=ty-p.y, dz=tz-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
+      const force=(c.mass*0.14)/Math.max(36,d2*0.018);
+      ax+=(dx/d)*force; ay+=(dy/d)*force; az+=(dz/d)*force;
+    });
+    const homeDx=((anchor.x-cx)/(anchor.scale||1))-p.x, homeDy=((anchor.y-cy)/(anchor.scale||1))-p.y, homeDz=(anchor.z||0)-p.z;
+    ax+=homeDx*0.00035; ay+=homeDy*0.00035; az+=homeDz*0.00035;
+    for(let j=0;j<particles.length;j++){
+      if(i===j) continue; const q=particles[j]; if(p.size<1.5 && q.size<1.5) continue;
+      const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
+      if(d<95*zoom){ const sign=d>34*zoom?1:-1; const strength=sign*(q.mass*0.0035)/Math.max(28,d2*0.04); ax+=(dx/d)*strength; ay+=(dy/d)*strength; az+=(dz/d)*strength; }
+      if(d<18*zoom){ const repel=(18*zoom-d)*0.0005; ax-=(dx/d)*repel; ay-=(dy/d)*repel; az-=(dz/d)*repel; }
+    }
+    seeds.forEach(seed=>{
+      const sx=seed.x*min*1.1, sy=seed.y*min*1.1, sz=Math.sin(tick*0.02 + seed.spin*40)*min*0.08*seed.strength;
+      const dx=sx-p.x, dy=sy-p.y, dz=sz-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
+      const grav=(seed.strength*0.012)/Math.max(45,d2*0.06);
+      ax+=(dx/d)*grav; ay+=(dy/d)*grav; az+=(dz/d)*grav;
+      ax+=(-(dy/d)*seed.spin*seed.strength*28)*0.00018;
+      ay+=((dx/d)*seed.spin*seed.strength*28)*0.00018;
+      az+=Math.cos(seed.spin*50 + tick*0.03)*seed.strength*0.0007;
+    });
+    ax+=Math.sin(tick*0.004+p.cluster)*0.0007;
+    ay+=Math.cos(tick*0.0035+p.cluster*0.7)*0.0007;
+    az+=Math.sin(tick*0.005 + i)*0.0045;
+    const px=(pointer.x-0.5)*min*0.5, py=(pointer.y-0.5)*min*0.5;
+    const pdx=px-p.x, pdy=py-p.y; const pd=Math.hypot(pdx,pdy)+0.001; ax+=(pdx/pd)*0.00018; ay+=(pdy/pd)*0.00018;
+    p.vx=(p.vx+ax)*0.989; p.vy=(p.vy+ay)*0.989; p.vz=(p.vz+az)*0.982;
+    p.x+=p.vx; p.y+=p.vy; p.z+=p.vz; p.lineable=p.size<1.45;
+
+    const ry=rotateY(p.x,p.z,totalYaw), rx=rotateX(p.y,ry.z,totalPitch);
+    const proj=projectPoint(ry.x,rx.y,rx.z,cx,cy);
+    absolute.push({ x:proj.x, y:proj.y, tone:p.tone, size:Math.max(0.35,p.size*(0.5 + proj.scale)), lineable:p.lineable, z:rx.z, scale:proj.scale });
+  });
+
+  drawLine(aodh,brendan,0.16,'gold');
+  clusterPoints.forEach(c=>drawLine(midpoint,c,0.025,c.tone));
+  clusterPoints.forEach(c=>drawDot(c.x,c.y,5.2*c.scale,c.tone,0.68));
+  drawDot(aodh.x,aodh.y,4.6*aodh.scale,'blue',0.95);
+  drawDot(brendan.x,brendan.y,5.5*brendan.scale,'gold',0.95);
+
+  const neighbors=new Map(); absolute.forEach((p,i)=>neighbors.set(i,[]));
+  for(let i=0;i<absolute.length;i++){
+    const a=absolute[i]; if(!a.lineable) continue;
+    for(let j=i+1;j<absolute.length;j++){
+      const b=absolute[j]; if(!b.lineable) continue;
+      const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy);
+      if(dist<42*zoom*Math.min(a.scale,b.scale)+8){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(42*zoom+8))*0.032,a.tone); }
+    }
+  }
+  for(let i=0;i<absolute.length;i++){
+    const a=absolute[i]; if(!a.lineable) continue; const ns=neighbors.get(i);
+    for(let ni=0;ni<ns.length;ni++) for(let nj=ni+1;nj<ns.length;nj++){
+      const j=ns[ni], k=ns[nj]; if(!neighbors.get(j).includes(k)) continue;
+      const b=absolute[j], c=absolute[k];
+      const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5;
+      if(area<220*zoom||area>720*zoom) continue; if(Math.random()>0.01) continue;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
+      ctx.fillStyle=toneColor(a.tone,0.007); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.016); ctx.stroke();
+    }
+  }
+  absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.3+Math.sin(tick*0.018+i*0.35)*0.12));
+  seeds.forEach(seed=>seed.strength*=0.996); while(seeds.length && seeds[0].strength<0.08) seeds.shift();
+  requestAnimationFrame(step);
+}
+window.addEventListener('wheel',e=>{ e.preventDefault(); interactionEnergy = Math.min(1, interactionEnergy + 0.25); cameraDistance += e.deltaY*0.12; cameraDistance=Math.max(280,Math.min(760,cameraDistance)); zoom += e.deltaY<0?0.03:-0.03; zoom=Math.max(0.8,Math.min(2.2,zoom)); },{passive:false});
 canvas.addEventListener('pointerdown',e=>{ interactionEnergy = Math.min(1, interactionEnergy + 0.35); lastPoint={x:e.clientX,y:e.clientY}; addSeed(e.clientX,e.clientY); canvas.setPointerCapture(e.pointerId); });
-canvas.addEventListener('pointermove',e=>{ if(!lastPoint||e.pointerType==='touch') return; interactionEnergy = Math.min(1, interactionEnergy + 0.06); const dx=e.clientX-lastPoint.x, dy=e.clientY-lastPoint.y; dragRotation += dx*0.003; dragPitch += dy*0.0045; depthTilt += dy*0.02; lastPoint={x:e.clientX,y:e.clientY}; pointer.x=e.clientX/w; pointer.y=e.clientY/h; });
-canvas.addEventListener('pointerup',()=>{ rotation+=dragRotation; pitch=Math.max(-1.15, Math.min(1.15, pitch + dragPitch)); dragRotation=0; dragPitch=0; lastPoint=null; });
+canvas.addEventListener('pointermove',e=>{ if(!lastPoint||e.pointerType==='touch') return; interactionEnergy = Math.min(1, interactionEnergy + 0.06); const dx=e.clientX-lastPoint.x, dy=e.clientY-lastPoint.y; dragYaw += dx*0.003; dragPitch += dy*0.0042; lastPoint={x:e.clientX,y:e.clientY}; pointer.x=e.clientX/w; pointer.y=e.clientY/h; });
+canvas.addEventListener('pointerup',()=>{ yaw+=dragYaw; pitch=Math.max(-1.1,Math.min(1.1,pitch+dragPitch)); dragYaw=0; dragPitch=0; lastPoint=null; });
 canvas.addEventListener('touchstart',e=>{ interactionEnergy = Math.min(1, interactionEnergy + 0.35); if(e.touches.length===1){ const t=e.touches[0]; lastPoint={x:t.clientX,y:t.clientY}; lastTouchDistance=null; addSeed(t.clientX,t.clientY); } else if(e.touches.length===2){ lastTouchDistance=distance(e.touches[0],e.touches[1]); } },{passive:false});
-canvas.addEventListener('touchmove',e=>{ e.preventDefault(); interactionEnergy = Math.min(1, interactionEnergy + 0.07); if(e.touches.length===1&&lastPoint){ const t=e.touches[0]; const dx=t.clientX-lastPoint.x, dy=t.clientY-lastPoint.y; dragRotation += dx*0.0035; dragPitch += dy*0.005; depthTilt += dy*0.024; lastPoint={x:t.clientX,y:t.clientY}; pointer.x=t.clientX/w; pointer.y=t.clientY/h; } else if(e.touches.length===2){ const d=distance(e.touches[0],e.touches[1]); if(lastTouchDistance){ zoom*=d/lastTouchDistance; zoom=Math.max(0.8,Math.min(2.2,zoom)); } lastTouchDistance=d; } },{passive:false});
-canvas.addEventListener('touchend',e=>{ if(e.touches.length<2) lastTouchDistance=null; if(e.touches.length===0){ rotation+=dragRotation; pitch=Math.max(-1.15, Math.min(1.15, pitch + dragPitch)); dragRotation=0; dragPitch=0; lastPoint=null; } });
+canvas.addEventListener('touchmove',e=>{ e.preventDefault(); interactionEnergy = Math.min(1, interactionEnergy + 0.07); if(e.touches.length===1&&lastPoint){ const t=e.touches[0]; const dx=t.clientX-lastPoint.x, dy=t.clientY-lastPoint.y; dragYaw += dx*0.0034; dragPitch += dy*0.0048; lastPoint={x:t.clientX,y:t.clientY}; pointer.x=t.clientX/w; pointer.y=t.clientY/h; } else if(e.touches.length===2){ const d=distance(e.touches[0],e.touches[1]); if(lastTouchDistance){ zoom*=d/lastTouchDistance; zoom=Math.max(0.8,Math.min(2.2,zoom)); } lastTouchDistance=d; } },{passive:false});
+canvas.addEventListener('touchend',e=>{ if(e.touches.length<2) lastTouchDistance=null; if(e.touches.length===0){ yaw+=dragYaw; pitch=Math.max(-1.1,Math.min(1.1,pitch+dragPitch)); dragYaw=0; dragPitch=0; lastPoint=null; } });
 window.addEventListener('resize',resize); resize(); build(); step();
 </script>
 </body>
