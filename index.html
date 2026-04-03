@@ -61,7 +61,7 @@ const anchors=[
   { angle:2.15, radius:0.34, tone:'white', mass:1.0 },
   { angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
 ];
-function toneColor(tone,a=1){ if(tone==='gold') return `rgba(255, 210, 170, ${a})`; if(tone==='white') return `rgba(255, 244, 250, ${a})`; return `rgba(184, 208, 255, ${a})`; }
+function toneColor(tone,a=1){ if(tone==='gold') return `rgba(255, 191, 146, ${a})`; if(tone==='white') return `rgba(255, 214, 235, ${a})`; return `rgba(154, 190, 255, ${a})`; }
 function rotateX(y,z,a){ const c=Math.cos(a), s=Math.sin(a); return { y:y*c-z*s, z:y*s+z*c }; }
 function rotateY(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return { x:x*c+z*s, z:-x*s+z*c }; }
 function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
@@ -179,7 +179,7 @@ function step(){
           const sd=Math.hypot(mx-sx,my-sy);
           if(sd<min*0.22) ruptureFade *= Math.max(0.08, sd/(min*0.22));
         }
-        drawLine(a,b,(1-dist/(46*zoom+10))*0.038*ruptureFade,a.tone);
+        drawLine(a,b,(1-dist/(46*zoom+10))*0.056*ruptureFade,a.tone);
       }
     }
   }
@@ -199,10 +199,10 @@ function step(){
       }
       if(ruptureFade < 0.08) continue;
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
-      ctx.fillStyle=toneColor(a.tone,0.125*ruptureFade); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.046*ruptureFade); ctx.stroke();
+      ctx.fillStyle=toneColor(a.tone,0.19*ruptureFade); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.072*ruptureFade); ctx.stroke();
     }
   }
-  absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,Math.max(0.12,p.size*0.32),p.tone,0.045+Math.sin(tick*0.018+i*0.35)*0.02));
+  absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,Math.max(0.12,p.size*0.32),p.tone,0.085+Math.sin(tick*0.018+i*0.35)*0.03));
   seeds.forEach(seed=>{
     if(seed.flare>0.03){
       const fx=(seed.x+0.5)*w, fy=(seed.y+0.5)*h;
