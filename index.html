@@ -143,9 +143,7 @@ function step(){
 
   drawLine(aodh,brendan,0.06,'gold');
   clusterPoints.forEach(c=>drawLine(midpoint,c,0.01,c.tone));
-  clusterPoints.forEach(c=>drawDot(c.x,c.y,5.2*c.scale,c.tone,0.68));
-  drawDot(aodh.x,aodh.y,4.6*aodh.scale,'blue',0.95);
-  drawDot(brendan.x,brendan.y,5.5*brendan.scale,'gold',0.95);
+  clusterPoints.forEach(c=>drawDot(c.x,c.y,5.2*c.scale,c.tone,0.28));
 
   const neighbors=new Map(); absolute.forEach((p,i)=>neighbors.set(i,[]));
   for(let i=0;i<absolute.length;i++){
