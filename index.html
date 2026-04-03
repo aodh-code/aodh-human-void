@@ -9,16 +9,17 @@
 
     html, body {
       margin: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none;
-      background: radial-gradient(circle at 50% 18%, #3f3f43 0%, #1f2024 38%, #101114 72%, #08090b 100%);
+      background: radial-gradient(circle at 50% 16%, #f7edf7 0%, #dbcfe9 26%, #a9b9dc 52%, #6e789d 78%, #2f3144 100%);
     }
     canvas { width: 100%; height: 100%; display: block; }
     .veil { position: fixed; inset: 0; pointer-events: none; mix-blend-mode: screen;
       background:
-        linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px),
-        radial-gradient(circle at 50% 24%, rgba(255,255,255,0.1), transparent 30%),
-        radial-gradient(circle at 50% 82%, rgba(255,255,255,0.03), transparent 28%);
-      background-size: 34px 34px, 34px 34px, 100% 100%, 100% 100%;
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px),
+        radial-gradient(circle at 24% 22%, rgba(255, 196, 214, 0.18), transparent 28%),
+        radial-gradient(circle at 76% 26%, rgba(196, 214, 255, 0.18), transparent 28%),
+        radial-gradient(circle at 50% 78%, rgba(255, 229, 184, 0.12), transparent 30%);
+      background-size: 34px 34px, 34px 34px, 100% 100%, 100% 100%, 100% 100%;
       opacity: 0.82;
     }
     .frame { position: fixed; inset: 12px; pointer-events: none; border: 1px solid rgba(255,255,255,0.06); border-radius: 24px; box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset; }
@@ -31,10 +32,11 @@
       font-size: clamp(20px, 2.6vw, 34px);
       line-height: 1;
       letter-spacing: 0.06em;
-      color: rgba(245, 245, 245, 0.88);
+      color: rgba(255, 246, 252, 0.92);
       text-shadow:
-        0 0 10px rgba(255, 255, 255, 0.18),
-        2px 2px 0 rgba(0,0,0,0.28);
+        0 0 12px rgba(255, 210, 233, 0.28),
+        0 0 18px rgba(196, 214, 255, 0.18),
+        2px 2px 0 rgba(0,0,0,0.2);
       transform: rotate(-3deg);
       opacity: 0.78;
       mix-blend-mode: screen;
@@ -59,7 +61,7 @@ const anchors=[
   { angle:2.15, radius:0.34, tone:'white', mass:1.0 },
   { angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
 ];
-function toneColor(tone,a=1){ if(tone==='gold') return `rgba(214,214,214,${a})`; if(tone==='white') return `rgba(255,255,255,${a})`; return `rgba(168,168,168,${a})`; }
+function toneColor(tone,a=1){ if(tone==='gold') return `rgba(255, 210, 170, ${a})`; if(tone==='white') return `rgba(255, 244, 250, ${a})`; return `rgba(184, 208, 255, ${a})`; }
 function rotateX(y,z,a){ const c=Math.cos(a), s=Math.sin(a); return { y:y*c-z*s, z:y*s+z*c }; }
 function rotateY(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return { x:x*c+z*s, z:-x*s+z*c }; }
 function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
