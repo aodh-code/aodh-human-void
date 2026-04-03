@@ -9,14 +9,17 @@
 
     html, body {
       margin: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none;
-      background: radial-gradient(circle at 50% 20%, #09121d 0%, #02040a 60%, #010203 100%);
+      background: radial-gradient(circle at 50% 18%, #3f3f43 0%, #1f2024 38%, #101114 72%, #08090b 100%);
     }
     canvas { width: 100%; height: 100%; display: block; }
     .veil { position: fixed; inset: 0; pointer-events: none; mix-blend-mode: screen;
       background:
-        radial-gradient(circle at 18% 20%, rgba(123,197,255,0.05), transparent 22%),
-        radial-gradient(circle at 82% 18%, rgba(239,212,145,0.04), transparent 18%),
-        radial-gradient(circle at 50% 82%, rgba(255,255,255,0.02), transparent 24%);
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+        radial-gradient(circle at 50% 24%, rgba(255,255,255,0.08), transparent 30%),
+        radial-gradient(circle at 50% 82%, rgba(255,255,255,0.02), transparent 28%);
+      background-size: 36px 36px, 36px 36px, 100% 100%, 100% 100%;
+      opacity: 0.62;
     }
     .frame { position: fixed; inset: 12px; pointer-events: none; border: 1px solid rgba(255,255,255,0.06); border-radius: 24px; box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset; }
     .ok-human {
@@ -28,13 +31,12 @@
       font-size: clamp(20px, 2.6vw, 34px);
       line-height: 1;
       letter-spacing: 0.06em;
-      color: rgba(255, 236, 184, 0.9);
+      color: rgba(245, 245, 245, 0.88);
       text-shadow:
-        0 0 10px rgba(239, 212, 145, 0.24),
-        0 0 22px rgba(123, 197, 255, 0.14),
+        0 0 10px rgba(255, 255, 255, 0.18),
         2px 2px 0 rgba(0,0,0,0.28);
       transform: rotate(-3deg);
-      opacity: 0.92;
+      opacity: 0.78;
       mix-blend-mode: screen;
     }
   </style>
@@ -57,7 +59,7 @@ const anchors=[
   { angle:2.15, radius:0.34, tone:'white', mass:1.0 },
   { angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
 ];
-function toneColor(tone,a=1){ if(tone==='gold') return `rgba(239,212,145,${a})`; if(tone==='white') return `rgba(239,245,252,${a})`; return `rgba(123,197,255,${a})`; }
+function toneColor(tone,a=1){ if(tone==='gold') return `rgba(214,214,214,${a})`; if(tone==='white') return `rgba(244,244,244,${a})`; return `rgba(160,160,160,${a})`; }
 function rotateX(y,z,a){ const c=Math.cos(a), s=Math.sin(a); return { y:y*c-z*s, z:y*s+z*c }; }
 function rotateY(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return { x:x*c+z*s, z:-x*s+z*c }; }
 function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
@@ -106,21 +108,21 @@ function step(){
     centres.forEach(c=>{
       const tx=(c.x-cx)/(c.scale||1), ty=(c.y-cy)/(c.scale||1), tz=c.z||0;
       const dx=tx-p.x, dy=ty-p.y, dz=tz-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
-      const force=(c.mass*0.14)/Math.max(36,d2*0.018);
+      const force=(c.mass*0.08)/Math.max(42,d2*0.022);
       ax+=(dx/d)*force; ay+=(dy/d)*force; az+=(dz/d)*force;
     });
     const homeDx=((anchor.x-cx)/(anchor.scale||1))-p.x, homeDy=((anchor.y-cy)/(anchor.scale||1))-p.y, homeDz=(anchor.z||0)-p.z;
-    ax+=homeDx*0.00035; ay+=homeDy*0.00035; az+=homeDz*0.00035;
+    ax+=homeDx*0.00022; ay+=homeDy*0.00022; az+=homeDz*0.00022;
     for(let j=0;j<particles.length;j++){
       if(i===j) continue; const q=particles[j]; if(p.size<1.5 && q.size<1.5) continue;
       const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
-      if(d<95*zoom){ const sign=d>34*zoom?1:-1; const strength=sign*(q.mass*0.0035)/Math.max(28,d2*0.04); ax+=(dx/d)*strength; ay+=(dy/d)*strength; az+=(dz/d)*strength; }
-      if(d<18*zoom){ const repel=(18*zoom-d)*0.0005; ax-=(dx/d)*repel; ay-=(dy/d)*repel; az-=(dz/d)*repel; }
+      if(d<82*zoom){ const sign=d>32*zoom?1:-1; const strength=sign*(q.mass*0.0018)/Math.max(32,d2*0.05); ax+=(dx/d)*strength; ay+=(dy/d)*strength; az+=(dz/d)*strength; }
+      if(d<15*zoom){ const repel=(15*zoom-d)*0.00022; ax-=(dx/d)*repel; ay-=(dy/d)*repel; az-=(dz/d)*repel; }
     }
     seeds.forEach(seed=>{
       const sx=seed.x*min*1.1, sy=seed.y*min*1.1, sz=Math.sin(tick*0.02 + seed.spin*40)*min*0.08*seed.strength;
       const dx=sx-p.x, dy=sy-p.y, dz=sz-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
-      const grav=(seed.strength*0.012)/Math.max(45,d2*0.06);
+      const grav=(seed.strength*0.006)/Math.max(55,d2*0.07);
       ax+=(dx/d)*grav; ay+=(dy/d)*grav; az+=(dz/d)*grav;
       ax+=(-(dy/d)*seed.spin*seed.strength*28)*0.00018;
       ay+=((dx/d)*seed.spin*seed.strength*28)*0.00018;
@@ -139,8 +141,8 @@ function step(){
     absolute.push({ x:proj.x, y:proj.y, tone:p.tone, size:Math.max(0.35,p.size*(0.5 + proj.scale)), lineable:p.lineable, z:rx.z, scale:proj.scale });
   });
 
-  drawLine(aodh,brendan,0.16,'gold');
-  clusterPoints.forEach(c=>drawLine(midpoint,c,0.025,c.tone));
+  drawLine(aodh,brendan,0.06,'gold');
+  clusterPoints.forEach(c=>drawLine(midpoint,c,0.01,c.tone));
   clusterPoints.forEach(c=>drawDot(c.x,c.y,5.2*c.scale,c.tone,0.68));
   drawDot(aodh.x,aodh.y,4.6*aodh.scale,'blue',0.95);
   drawDot(brendan.x,brendan.y,5.5*brendan.scale,'gold',0.95);
@@ -151,7 +153,7 @@ function step(){
     for(let j=i+1;j<absolute.length;j++){
       const b=absolute[j]; if(!b.lineable) continue;
       const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy);
-      if(dist<42*zoom*Math.min(a.scale,b.scale)+8){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(42*zoom+8))*0.032,a.tone); }
+      if(dist<30*zoom*Math.min(a.scale,b.scale)+5){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(30*zoom+5))*0.012,a.tone); }
     }
   }
   for(let i=0;i<absolute.length;i++){
@@ -160,9 +162,9 @@ function step(){
       const j=ns[ni], k=ns[nj]; if(!neighbors.get(j).includes(k)) continue;
       const b=absolute[j], c=absolute[k];
       const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5;
-      if(area<220*zoom||area>720*zoom) continue; if(Math.random()>0.01) continue;
+      if(area<240*zoom||area>620*zoom) continue; if(Math.random()>0.003) continue;
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
-      ctx.fillStyle=toneColor(a.tone,0.007); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.016); ctx.stroke();
+      ctx.fillStyle=toneColor(a.tone,0.004); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.009); ctx.stroke();
     }
   }
   absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,p.size,p.tone,0.3+Math.sin(tick*0.018+i*0.35)*0.12));
