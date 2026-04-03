@@ -59,7 +59,7 @@ const anchors=[
   { angle:2.15, radius:0.34, tone:'white', mass:1.0 },
   { angle:2.85, radius:0.29, tone:'blue', mass:1.05 }
 ];
-function toneColor(tone,a=1){ if(tone==='gold') return `rgba(214,214,214,${a})`; if(tone==='white') return `rgba(244,244,244,${a})`; return `rgba(160,160,160,${a})`; }
+function toneColor(tone,a=1){ if(tone==='gold') return `rgba(214,214,214,${a})`; if(tone==='white') return `rgba(255,255,255,${a})`; return `rgba(168,168,168,${a})`; }
 function rotateX(y,z,a){ const c=Math.cos(a), s=Math.sin(a); return { y:y*c-z*s, z:y*s+z*c }; }
 function rotateY(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return { x:x*c+z*s, z:-x*s+z*c }; }
 function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
@@ -113,6 +113,7 @@ function step(){
     });
     const homeDx=((anchor.x-cx)/(anchor.scale||1))-p.x, homeDy=((anchor.y-cy)/(anchor.scale||1))-p.y, homeDz=(anchor.z||0)-p.z;
     ax+=homeDx*0.00042; ay+=homeDy*0.00042; az+=homeDz*0.00042;
+    ax+=(-p.x)*0.00018; ay+=(-p.y)*0.00018; az+=(-p.z)*0.00016;
     for(let j=0;j<particles.length;j++){
       if(i===j) continue; const q=particles[j]; if(p.size<1.5 && q.size<1.5) continue;
       const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z; const d2=dx*dx+dy*dy+dz*dz+0.001; const d=Math.sqrt(d2);
@@ -148,7 +149,7 @@ function step(){
     for(let j=i+1;j<absolute.length;j++){
       const b=absolute[j]; if(!b.lineable) continue;
       const dx=a.x-b.x, dy=a.y-b.y; const dist=Math.hypot(dx,dy);
-      if(dist<46*zoom*Math.min(a.scale,b.scale)+10){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(46*zoom+10))*0.034,a.tone); }
+      if(dist<46*zoom*Math.min(a.scale,b.scale)+10){ neighbors.get(i).push(j); neighbors.get(j).push(i); drawLine(a,b,(1-dist/(46*zoom+10))*0.038,a.tone); }
     }
   }
   for(let i=0;i<absolute.length;i++){
@@ -159,7 +160,7 @@ function step(){
       const area=Math.abs((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y))*0.5;
       if(area<140*zoom||area>980*zoom) continue; if(Math.random()>0.045) continue;
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
-      ctx.fillStyle=toneColor(a.tone,0.11); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.038); ctx.stroke();
+      ctx.fillStyle=toneColor(a.tone,0.125); ctx.fill(); ctx.strokeStyle=toneColor(a.tone,0.046); ctx.stroke();
     }
   }
   absolute.sort((a,b)=>a.z-b.z).forEach((p,i)=>drawDot(p.x,p.y,Math.max(0.12,p.size*0.32),p.tone,0.045+Math.sin(tick*0.018+i*0.35)*0.02));
